@@ -783,13 +783,72 @@ void GPIO_SetPin(u8 Port,u8 Pin_Number,u8 Value)
                 CLRBIT(GPIO_PORTF_AHB_DATA_R,Pin_Number);
             }
         #endif
-
     }
 
 }
+/*********************************************************************/
+u8 GPIO_GetPin(u8 Port,u8 Pin_Number)
+{
+    u8 Value=0;
+    if(Port==PORTA)
+    {
+        #if(PORTA_BUS_CONTROL==APB)
+        Value =GETBIT(GPIO_PORTA_DATA_R,Pin_Number);
+
+        #elif(PORTA_BUS_CONTROL==AHB)
+        Value =GETBIT(GPIO_PORTA_AHB_DATA_R,Pin_Number);
+        #endif
+    }
+
+    else if(Port==PORTB)
+    {
+        #if(PORTA_BUS_CONTROL==APB)
+        Value =GETBIT(GPIO_PORTB_DATA_R,Pin_Number);
+
+        #elif(PORTA_BUS_CONTROL==AHB)
+        Value =GETBIT(GPIO_PORTB_AHB_DATA_R,Pin_Number);
+        #endif
+    }
+    else if(Port==PORTC)
+    {
+        #if(PORTA_BUS_CONTROL==APB)
+        Value =GETBIT(GPIO_PORTC_DATA_R,Pin_Number);
+
+        #elif(PORTA_BUS_CONTROL==AHB)
+        Value =GETBIT(GPIO_PORTC_AHB_DATA_R,Pin_Number);
+        #endif
+    }
+    else if(Port==PORTD)
+    {
+        #if(PORTA_BUS_CONTROL==APB)
+        Value =GETBIT(GPIO_PORTD_DATA_R,Pin_Number);
+
+        #elif(PORTA_BUS_CONTROL==AHB)
+        Value =GETBIT(GPIO_PORTD_AHB_DATA_R,Pin_Number);
+        #endif
+    }
+    else if(Port==PORTE)
+    {
+        #if(PORTA_BUS_CONTROL==APB)
+        Value =GETBIT(GPIO_PORTE_DATA_R,Pin_Number);
+
+        #elif(PORTA_BUS_CONTROL==AHB)
+        Value =GETBIT(GPIO_PORTE_AHB_DATA_R,Pin_Number);
+        #endif
+    }
+    else if(Port==PORTF)
+    {
+        #if(PORTA_BUS_CONTROL==APB)
+        Value =GETBIT(GPIO_PORTF_DATA_R,Pin_Number);
+
+        #elif(PORTA_BUS_CONTROL==AHB)
+        Value =GETBIT(GPIO_PORTF_AHB_DATA_R,Pin_Number);
+        #endif
+    }
 
 
-
+return (Value);
+}
 
 
 
