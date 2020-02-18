@@ -1,856 +1,233 @@
 /*
  * GPIO_prog.c
  *
- *  Created on: Feb 10, 2020
+ *  Created on: Feb 17, 2020
  *      Author: Abdelrahman Essam
  */
-
+/*
+ * bus  = APB , AHBA , AHBB , AHBC , AHBD , AHBE , AHBF
+ */
 #ifndef GPIO_PROG_C_
 #define GPIO_PROG_C_
-#include "GPIO_Init.h"
-/******************************************************************************/
-void GPIO_InitPort(u8 Port)
-{
-if(Port==PORTA)
-{
-    #if(PORTA_BUS_CONTROL==APB)
-    CLRBIT(SYSCTL_GPIOHBCTL_R,0);
-    #elif(PORTA_BUS_CONTROL==AHB)
-    SETBIT(SYSCTL_GPIOHBCTL_R,0);
-    #endif
 
-    #if(PORTA_OPERATION_MODE==NORMAL_RUN_MODE)
-    SETBIT(SYSCTL_RCGCGPIO_R,0);
-    CLRBIT(SYSCTL_SCGCGPIO_R,0);
-    CLRBIT(SYSCTL_DCGCGPIO_R,0);
-    #elif(PORTA_OPERATION_MODE==SLEEP_MODE)
-    CLRBIT(SYSCTL_RCGCGPIO_R,0);
-    SETBIT(SYSCTL_SCGCGPIO_R,0);
-    CLRBIT(SYSCTL_DCGCGPIO_R,0);
-    #elif(PORTA_OPERATION_MODE==DEEP_SLEEP_MODE)
-    CLRBIT(SYSCTL_RCGCGPIO_R,0);
-    CLRBIT(SYSCTL_SCGCGPIO_R,0);
-    SETBIT(SYSCTL_DCGCGPIO_R,0);
-    #endif
+#include "GPIO_init.h"
+
+u8 GPIOPortTrans(gpio_port_t port)
+{
+    u8 Port=0;
+    if(port==PORTA)
+        Port=0;
+    else if(port==PORTB)
+        Port=1;
+    else if(port==PORTC)
+        Port=2;
+    else if(port==PORTD)
+        Port=3;
+    else if(port==PORTE)
+        Port=4;
+    else if(port==PORTF)
+        Port=5;
+    return (Port);
 }
-else if(Port==PORTB)
+/*********************************************/
+void GPIOBusSet(gpio_port_t port,gpio_bus_t bus)
 {
-    #if(PORTB_BUS_CONTROL==APB)
-    CLRBIT(SYSCTL_GPIOHBCTL_R,1);
-    #elif(PORTB_BUS_CONTROL==AHB)
-    SETBIT(SYSCTL_GPIOHBCTL_R,1);
-    #endif
-
-    #if(PORTB_OPERATION_MODE==NORMAL_RUN_MODE)
-    SETBIT(SYSCTL_RCGCGPIO_R,1);
-    CLRBIT(SYSCTL_SCGCGPIO_R,1);
-    CLRBIT(SYSCTL_DCGCGPIO_R,1);
-    #elif(PORTB_OPERATION_MODE==SLEEP_MODE)
-    CLRBIT(SYSCTL_RCGCGPIO_R,1);
-    SETBIT(SYSCTL_SCGCGPIO_R,1);
-    CLRBIT(SYSCTL_DCGCGPIO_R,1);
-    #elif(PORTB_OPERATION_MODE==DEEP_SLEEP_MODE)
-    CLRBIT(SYSCTL_RCGCGPIO_R,1);
-    CLRBIT(SYSCTL_SCGCGPIO_R,1);
-    SETBIT(SYSCTL_DCGCGPIO_R,1);
-    #endif
+/*
+ * port = PORTA , PORTB , PORTC , PORTD , PORTE , PORTF
+ * bus  = APB , AHB
+ */
+    u8 Port=GPIOPortTrans(port);
+    SYSCTL_GPIOHBCTL_R &= ~(1<<Port);
+    SYSCTL_GPIOHBCTL_R |=  (bus<<Port);
 }
-else if(Port==PORTC)
+/*********************************************/
+u32 GPIOBusGet(gpio_port_t port)
 {
-    #if(PORTC_BUS_CONTROL==APB)
-    CLRBIT(SYSCTL_GPIOHBCTL_R,2);
-    #elif(PORTC_BUS_CONTROL==AHB)
-    SETBIT(SYSCTL_GPIOHBCTL_R,2);
-    #endif
+/* port = PORTA , PORTB , PORTC , PORTD , PORTE , PORTF
+ * return 1 --> AHB  ,return 0 --> APB */
+    u8 Port=GPIOPortTrans(port);
+    u32 bus=0;
+    u8 value=GETBIT(SYSCTL_GPIOHBCTL_R,Port);
+    if((value==1)&&(Port<4))
+    { bus=0x54000;}
+    else if((value==1)&&(Port>4))
+    {   bus=0x38000;  }
 
-    #if(PORTC_OPERATION_MODE==NORMAL_RUN_MODE)
-    SETBIT(SYSCTL_RCGCGPIO_R,2);
-    CLRBIT(SYSCTL_SCGCGPIO_R,2);
-    CLRBIT(SYSCTL_DCGCGPIO_R,2);
-    #elif(PORTC_OPERATION_MODE==SLEEP_MODE)
-    CLRBIT(SYSCTL_RCGCGPIO_R,2);
-    SETBIT(SYSCTL_SCGCGPIO_R,2);
-    CLRBIT(SYSCTL_DCGCGPIO_R,2);
-    #elif(PORTC_OPERATION_MODE==DEEP_SLEEP_MODE)
-    CLRBIT(SYSCTL_RCGCGPIO_R,2);
-    CLRBIT(SYSCTL_SCGCGPIO_R,2);
-    SETBIT(SYSCTL_DCGCGPIO_R,2);
-    #endif
+return (bus);
 }
-else if(Port==PORTD)
+/**********************************************/
+u32 GPIOPortAddrGet(gpio_port_t port)
+{ /* port = PORTA , PORTB , PORTC , PORTD , PORTE , PORTF */
+    u32 bus =0;
+    bus =GPIOBusGet(port);
+    u32 Address=port+bus;
+    return (Address);
+}
+/**********************************************/
+void GPIOClockSet(gpio_port_t port,gpio_ClockMode_t ClockMode)
+{/* port = PORTA , PORTB , PORTC , PORTD , PORTE , PORTF
+    ClockMode = RCGC , SCGC , DCGC */
+    u8 Port=GPIOPortTrans(port);
+    CLRBIT(SYSCTL_RCGCGPIO_R,Port);
+    CLRBIT(SYSCTL_SCGCGPIO_R,Port);
+    CLRBIT(SYSCTL_DCGCGPIO_R,Port);
+    REG reg = SYSCTL + ClockMode;
+    u8 reg_data=*reg;
+    SETBIT(reg_data,Port);
+    *reg = reg_data;
+}
+/**********************************************/
+void GPIOClockRst(gpio_port_t port)
+{/* port = PORTA , PORTB , PORTC , PORTD , PORTE , PORTF */
+    u8 Port=GPIOPortTrans(port);
+    CLRBIT(SYSCTL_RCGCGPIO_R,Port);
+    CLRBIT(SYSCTL_SCGCGPIO_R,Port);
+    CLRBIT(SYSCTL_DCGCGPIO_R,Port);
+}
+/**********************************************/
+u8 GPIOClockGet(gpio_port_t port)
+{/* port = PORTA , PORTB , PORTC , PORTD , PORTE , PORTF */
+    u8 Port=GPIOPortTrans(port);
+    if((GETBIT(SYSCTL_RCGCGPIO_R,Port)==1)||(GETBIT(SYSCTL_SCGCGPIO_R,Port)==1)||(GETBIT(SYSCTL_DCGCGPIO_R,Port)==1))
+        return(1);
+    else
+        return(0);
+}
+/**********************************************/
+void GPIODirModeSet(gpio_port_t port, u8 pins, gpio_mode_t Mode)
 {
-    #if(PORTD_BUS_CONTROL==APB)
-    CLRBIT(SYSCTL_GPIOHBCTL_R,3);
-    #elif(PORTD_BUS_CONTROL==AHB)
-    SETBIT(SYSCTL_GPIOHBCTL_R,3);
-    #endif
-
-    #if(PORTD_OPERATION_MODE==NORMAL_RUN_MODE)
-    SETBIT(SYSCTL_RCGCGPIO_R,3);
-    CLRBIT(SYSCTL_SCGCGPIO_R,3);
-    CLRBIT(SYSCTL_DCGCGPIO_R,3);
-    #elif(PORTD_OPERATION_MODE==SLEEP_MODE)
-    CLRBIT(SYSCTL_RCGCGPIO_R,3);
-    SETBIT(SYSCTL_SCGCGPIO_R,3);
-    CLRBIT(SYSCTL_DCGCGPIO_R,3);
-    #elif(PORTD_OPERATION_MODE==DEEP_SLEEP_MODE)
-    CLRBIT(SYSCTL_RCGCGPIO_R,3);
-    CLRBIT(SYSCTL_SCGCGPIO_R,3);
-    SETBIT(SYSCTL_DCGCGPIO_R,3);
-    #endif
-}
-else if(Port==PORTE)
-{
-    #if(PORTE_BUS_CONTROL==APB)
-    CLRBIT(SYSCTL_GPIOHBCTL_R,4);
-    #elif(PORTE_BUS_CONTROL==AHB)
-    SETBIT(SYSCTL_GPIOHBCTL_R,4);
-    #endif
-
-    #if(PORTE_OPERATION_MODE==NORMAL_RUN_MODE)
-    SETBIT(SYSCTL_RCGCGPIO_R,4);
-    CLRBIT(SYSCTL_SCGCGPIO_R,4);
-    CLRBIT(SYSCTL_DCGCGPIO_R,4);
-    #elif(PORTE_OPERATION_MODE==SLEEP_MODE)
-    CLRBIT(SYSCTL_RCGCGPIO_R,4);
-    SETBIT(SYSCTL_SCGCGPIO_R,4);
-    CLRBIT(SYSCTL_DCGCGPIO_R,4);
-    #elif(PORTE_OPERATION_MODE==DEEP_SLEEP_MODE)
-    CLRBIT(SYSCTL_RCGCGPIO_R,4);
-    CLRBIT(SYSCTL_SCGCGPIO_R,4);
-    SETBIT(SYSCTL_DCGCGPIO_R,4);
-    #endif
-}
-else if(Port==PORTF)
-{
-    #if(PORTF_BUS_CONTROL==APB)
-    CLRBIT(SYSCTL_GPIOHBCTL_R,5);
-    #elif(PORTF_BUS_CONTROL==AHB)
-    SETBIT(SYSCTL_GPIOHBCTL_R,5);
-    #endif
-
-    #if(PORTF_OPERATION_MODE==NORMAL_RUN_MODE)
-    SETBIT(SYSCTL_RCGCGPIO_R,5);
-    CLRBIT(SYSCTL_SCGCGPIO_R,5);
-    CLRBIT(SYSCTL_DCGCGPIO_R,5);
-    #elif(PORTF_OPERATION_MODE==SLEEP_MODE)
-    CLRBIT(SYSCTL_RCGCGPIO_R,5);
-    SETBIT(SYSCTL_SCGCGPIO_R,5);
-    CLRBIT(SYSCTL_DCGCGPIO_R,5);
-    #elif(PORTF_OPERATION_MODE==DEEP_SLEEP_MODE)
-    CLRBIT(SYSCTL_RCGCGPIO_R,5);
-    CLRBIT(SYSCTL_SCGCGPIO_R,5);
-    SETBIT(SYSCTL_DCGCGPIO_R,5);
-    #endif
-}
-}
-/***************************************************************/
-void GPIO_InitPin(u8 Port,u8 Pin_Number,u8 DIR,u8 Aleternative_Func,u8 Drive_Select,u8 Digital_EN)
-{
-    /*
-     * Warning Don't use PC[0-3]
-     * Port --> PORTA PORTB PORTC.....,PORTF
-     * Pin_Number --> 0,1,2,3,4,5,6,7
-     * DIR --> IN,OUT,NULL
-     * Alternative Function --> GPIO , AF       this mode not fully configured
-     * Drive_Current_Consumption --> DR2R,DR4R,DR8R
-     * Digital Enable ---> EN, DIS,AN_EN
-     * Analog :is only valid for ports and pins that can be used as ADC AINx inputs.
-     * **************************************************
-     * Warning Don't use PC[0-3]
-     * PA[1:0] UART0
-     * PA[5:2] SSI0
-     * PB[3:2] I21C0
-     * PC[3:0] JTAG/SWD
-     * PD[7] GPIOa
-     * PF[0] GPIOa
-     * This pin is configured as a GPIO by default but is locked
-     * and can only be reprogrammed by unlocking the
-     */
-if(Port==PORTA)
-{
-    #if(PORTA_BUS_CONTROL==APB)
-         if(DIR==IN)
-         CLRBIT(GPIO_PORTA_DIR_R,Pin_Number);
-         else if(DIR==OUT)
-         SETBIT(GPIO_PORTA_DIR_R,Pin_Number);
-
-         if(Aleternative_Func==GPIO)
-             CLRBIT(GPIO_PORTA_AFSEL_R,Pin_Number);
-         else if(Aleternative_Func==AF)
-             SETBIT(GPIO_PORTA_AFSEL_R,Pin_Number);
-
-         if(Drive_Select==DR2R)
-         {
-             SETBIT(GPIO_PORTA_DR2R_R,Pin_Number);
-             CLRBIT(GPIO_PORTA_DR4R_R,Pin_Number);
-             CLRBIT(GPIO_PORTA_DR8R_R,Pin_Number);
-         }
-         else if(Drive_Select==DR4R)
-         {
-             CLRBIT(GPIO_PORTA_DR2R_R,Pin_Number);
-             SETBIT(GPIO_PORTA_DR4R_R,Pin_Number);
-             CLRBIT(GPIO_PORTA_DR8R_R,Pin_Number);
-         }
-         else if(Drive_Select==DR8R)
-         {
-             CLRBIT(GPIO_PORTA_DR2R_R,Pin_Number);
-             CLRBIT(GPIO_PORTA_DR4R_R,Pin_Number);
-             SETBIT(GPIO_PORTA_DR8R_R,Pin_Number);
-         }
-
-         if(Digital_EN==EN)
-             SETBIT(GPIO_PORTA_DEN_R,Pin_Number);
-         else if(Digital_EN==DIS)
-             CLRBIT(GPIO_PORTA_DEN_R,Pin_Number);
-
-    #elif(PORTA_BUS_CONTROL==AHB)
-        if(DIR==IN)
-        CLRBIT(GPIO_PORTA_AHB_DIR_R,Pin_Number);
-        else if(DIR==OUT)
-        SETBIT(GPIO_PORTA_AHB_DIR_R,Pin_Number);
-
-        if(Aleternative_Func==GPIO)
-          CLRBIT(GPIO_PORTA_AHB_AFSEL_R,Pin_Number);
-        else if(Aleternative_Func==AF)
-          SETBIT(GPIO_PORTA_AHB_AFSEL_R,Pin_Number);
-
-        if(Drive_Select==DR2R)
-        {
-          SETBIT(GPIO_PORTA_AHB_DR2R_R,Pin_Number);
-          CLRBIT(GPIO_PORTA_AHB_DR4R_R,Pin_Number);
-          CLRBIT(GPIO_PORTA_AHB_DR8R_R,Pin_Number);
-        }
-        else if(Drive_Select==DR4R)
-        {
-          CLRBIT(GPIO_PORTA_AHB_DR2R_R,Pin_Number);
-          SETBIT(GPIO_PORTA_AHB_DR4R_R,Pin_Number);
-          CLRBIT(GPIO_PORTA_AHB_DR8R_R,Pin_Number);
-        }
-        else if(Drive_Select==DR8R)
-        {
-          CLRBIT(GPIO_PORTA_AHB_DR2R_R,Pin_Number);
-          CLRBIT(GPIO_PORTA_AHB_DR4R_R,Pin_Number);
-          SETBIT(GPIO_PORTA_AHB_DR8R_R,Pin_Number);
-        }
-
-        if(Digital_EN==EN)
-          SETBIT(GPIO_PORTA_AHB_DEN_R,Pin_Number);
-        else if(Digital_EN==DIS)
-          CLRBIT(GPIO_PORTA_AHB_DEN_R,Pin_Number);
-    #endif
-}
-else if(Port==PORTB)
-{
-    #if(PORTB_BUS_CONTROL==APB)
-         if(DIR==IN)
-         CLRBIT(GPIO_PORTB_DIR_R,Pin_Number);
-         else if(DIR==OUT)
-         SETBIT(GPIO_PORTB_DIR_R,Pin_Number);
-
-         if(Aleternative_Func==GPIO)
-             CLRBIT(GPIO_PORTB_AFSEL_R,Pin_Number);
-         else if(Aleternative_Func==AF)
-             SETBIT(GPIO_PORTB_AFSEL_R,Pin_Number);
-
-         if(Drive_Select==DR2R)
-         {
-             SETBIT(GPIO_PORTB_DR2R_R,Pin_Number);
-             CLRBIT(GPIO_PORTB_DR4R_R,Pin_Number);
-             CLRBIT(GPIO_PORTB_DR8R_R,Pin_Number);
-         }
-         else if(Drive_Select==DR4R)
-         {
-             CLRBIT(GPIO_PORTB_DR2R_R,Pin_Number);
-             SETBIT(GPIO_PORTB_DR4R_R,Pin_Number);
-             CLRBIT(GPIO_PORTB_DR8R_R,Pin_Number);
-         }
-         else if(Drive_Select==DR8R)
-         {
-             CLRBIT(GPIO_PORTB_DR2R_R,Pin_Number);
-             CLRBIT(GPIO_PORTB_DR4R_R,Pin_Number);
-             SETBIT(GPIO_PORTB_DR8R_R,Pin_Number);
-         }
-
-         if(Digital_EN==EN)
-             SETBIT(GPIO_PORTB_DEN_R,Pin_Number);
-         else if(Digital_EN==DIS)
-         {
-           CLRBIT(GPIO_PORTB_DEN_R,Pin_Number);
-           CLRBIT(GPIO_PORTB_AMSEL_R,Pin_Number);
-         }
-         else if(Digital_EN==AN_EN)
-           SETBIT(GPIO_PORTB_AMSEL_R,Pin_Number);
-
-    #elif(PORTB_BUS_CONTROL==AHB)
-        if(DIR==IN)
-        CLRBIT(GPIO_PORTB_AHB_DIR_R,Pin_Number);
-        else if(DIR==OUT)
-        SETBIT(GPIO_PORTB_AHB_DIR_R,Pin_Number);
-
-        if(Aleternative_Func==GPIO)
-          CLRBIT(GPIO_PORTB_AHB_AFSEL_R,Pin_Number);
-        else if(Aleternative_Func==AF)
-          SETBIT(GPIO_PORTB_AHB_AFSEL_R,Pin_Number);
-
-        if(Drive_Select==DR2R)
-        {
-          SETBIT(GPIO_PORTB_AHB_DR2R_R,Pin_Number);
-          CLRBIT(GPIO_PORTB_AHB_DR4R_R,Pin_Number);
-          CLRBIT(GPIO_PORTB_AHB_DR8R_R,Pin_Number);
-        }
-        else if(Drive_Select==DR4R)
-        {
-          CLRBIT(GPIO_PORTB_AHB_DR2R_R,Pin_Number);
-          SETBIT(GPIO_PORTB_AHB_DR4R_R,Pin_Number);
-          CLRBIT(GPIO_PORTB_AHB_DR8R_R,Pin_Number);
-        }
-        else if(Drive_Select==DR8R)
-        {
-          CLRBIT(GPIO_PORTB_AHB_DR2R_R,Pin_Number);
-          CLRBIT(GPIO_PORTB_AHB_DR4R_R,Pin_Number);
-          SETBIT(GPIO_PORTB_AHB_DR8R_R,Pin_Number);
-        }
-
-        if(Digital_EN==EN)
-          SETBIT(GPIO_PORTB_AHB_DEN_R,Pin_Number);
-        else if(Digital_EN==DIS)
-        {
-          CLRBIT(GPIO_PORTB_AHB_DEN_R,Pin_Number);
-          CLRBIT(GPIO_PORTB_AHB_AMSEL_R,Pin_Number);
-        }
-        else if(Digital_EN==AN_EN)
-          SETBIT(GPIO_PORTB_AHB_AMSEL_R,Pin_Number);
-    #endif
-}
-else if(Port==PORTC)
-{
-    #if(PORTC_BUS_CONTROL==APB)
-         if(DIR==IN)
-         CLRBIT(GPIO_PORTC_DIR_R,Pin_Number);
-         else if(DIR==OUT)
-         SETBIT(GPIO_PORTC_DIR_R,Pin_Number);
-
-         if(Aleternative_Func==GPIO)
-             CLRBIT(GPIO_PORTC_AFSEL_R,Pin_Number);
-         else if(Aleternative_Func==AF)
-             SETBIT(GPIO_PORTC_AFSEL_R,Pin_Number);
-
-         if(Drive_Select==DR2R)
-         {
-             SETBIT(GPIO_PORTC_DR2R_R,Pin_Number);
-             CLRBIT(GPIO_PORTC_DR4R_R,Pin_Number);
-             CLRBIT(GPIO_PORTC_DR8R_R,Pin_Number);
-         }
-         else if(Drive_Select==DR4R)
-         {
-             CLRBIT(GPIO_PORTC_DR2R_R,Pin_Number);
-             SETBIT(GPIO_PORTC_DR4R_R,Pin_Number);
-             CLRBIT(GPIO_PORTC_DR8R_R,Pin_Number);
-         }
-         else if(Drive_Select==DR8R)
-         {
-             CLRBIT(GPIO_PORTC_DR2R_R,Pin_Number);
-             CLRBIT(GPIO_PORTC_DR4R_R,Pin_Number);
-             SETBIT(GPIO_PORTC_DR8R_R,Pin_Number);
-         }
-
-         if(Digital_EN==EN)
-             SETBIT(GPIO_PORTC_DEN_R,Pin_Number);
-         else if(Digital_EN==DIS)
-          {
-             CLRBIT(GPIO_PORTC_DEN_R,Pin_Number);
-             CLRBIT(GPIO_PORTC_AMSEL_R,Pin_Number);
-          }
-          else if(Digital_EN==AN_EN)
-             SETBIT(GPIO_PORTC_AMSEL_R,Pin_Number);
-
-    #elif(PORTC_BUS_CONTROL==AHB)
-        if(DIR==IN)
-        CLRBIT(GPIO_PORTC_AHB_DIR_R,Pin_Number);
-        else if(DIR==OUT)
-        SETBIT(GPIO_PORTC_AHB_DIR_R,Pin_Number);
-
-        if(Aleternative_Func==GPIO)
-          CLRBIT(GPIO_PORTC_AHB_AFSEL_R,Pin_Number);
-        else if(Aleternative_Func==AF)
-          SETBIT(GPIO_PORTC_AHB_AFSEL_R,Pin_Number);
-
-        if(Drive_Select==DR2R)
-        {
-          SETBIT(GPIO_PORTC_AHB_DR2R_R,Pin_Number);
-          CLRBIT(GPIO_PORTC_AHB_DR4R_R,Pin_Number);
-          CLRBIT(GPIO_PORTC_AHB_DR8R_R,Pin_Number);
-        }
-        else if(Drive_Select==DR4R)
-        {
-          CLRBIT(GPIO_PORTC_AHB_DR2R_R,Pin_Number);
-          SETBIT(GPIO_PORTC_AHB_DR4R_R,Pin_Number);
-          CLRBIT(GPIO_PORTC_AHB_DR8R_R,Pin_Number);
-        }
-        else if(Drive_Select==DR8R)
-        {
-          CLRBIT(GPIO_PORTC_AHB_DR2R_R,Pin_Number);
-          CLRBIT(GPIO_PORTC_AHB_DR4R_R,Pin_Number);
-          SETBIT(GPIO_PORTC_AHB_DR8R_R,Pin_Number);
-        }
-
-        if(Digital_EN==EN)
-          SETBIT(GPIO_PORTC_AHB_DEN_R,Pin_Number);
-        else if(Digital_EN==DIS)
-        {
-          CLRBIT(GPIO_PORTC_AHB_DEN_R,Pin_Number);
-          CLRBIT(GPIO_PORTC_AHB_AMSEL_R,Pin_Number);
-        }
-        else if(Digital_EN==AN_EN)
-          SETBIT(GPIO_PORTC_AHB_AMSEL_R,Pin_Number);
-    #endif
-}
-else if(Port==PORTD)
-{
-    #if(PORTD_BUS_CONTROL==APB)
-         if(DIR==IN)
-         CLRBIT(GPIO_PORTD_DIR_R,Pin_Number);
-         else if(DIR==OUT)
-         SETBIT(GPIO_PORTD_DIR_R,Pin_Number);
-
-         if(Aleternative_Func==GPIO)
-             CLRBIT(GPIO_PORTD_AFSEL_R,Pin_Number);
-         else if(Aleternative_Func==AF)
-             SETBIT(GPIO_PORTD_AFSEL_R,Pin_Number);
-
-         if(Drive_Select==DR2R)
-         {
-             SETBIT(GPIO_PORTD_DR2R_R,Pin_Number);
-             CLRBIT(GPIO_PORTD_DR4R_R,Pin_Number);
-             CLRBIT(GPIO_PORTD_DR8R_R,Pin_Number);
-         }
-         else if(Drive_Select==DR4R)
-         {
-             CLRBIT(GPIO_PORTD_DR2R_R,Pin_Number);
-             SETBIT(GPIO_PORTD_DR4R_R,Pin_Number);
-             CLRBIT(GPIO_PORTD_DR8R_R,Pin_Number);
-         }
-         else if(Drive_Select==DR8R)
-         {
-             CLRBIT(GPIO_PORTD_DR2R_R,Pin_Number);
-             CLRBIT(GPIO_PORTD_DR4R_R,Pin_Number);
-             SETBIT(GPIO_PORTD_DR8R_R,Pin_Number);
-         }
-
-         if(Digital_EN==EN)
-             SETBIT(GPIO_PORTD_DEN_R,Pin_Number);
-         else if(Digital_EN==DIS)
-         {
-             CLRBIT(GPIO_PORTD_DEN_R,Pin_Number);
-             CLRBIT(GPIO_PORTD_AMSEL_R,Pin_Number);
-         }
-         else if(Digital_EN==AN_EN)
-             SETBIT(GPIO_PORTD_AMSEL_R,Pin_Number);
-
-
-    #elif(PORTD_BUS_CONTROL==AHB)
-        if(DIR==IN)
-        CLRBIT(GPIO_PORTD_AHB_DIR_R,Pin_Number);
-        else if(DIR==OUT)
-        SETBIT(GPIO_PORTD_AHB_DIR_R,Pin_Number);
-
-        if(Aleternative_Func==GPIO)
-          CLRBIT(GPIO_PORTD_AHB_AFSEL_R,Pin_Number);
-        else if(Aleternative_Func==AF)
-          SETBIT(GPIO_PORTD_AHB_AFSEL_R,Pin_Number);
-
-        if(Drive_Select==DR2R)
-        {
-          SETBIT(GPIO_PORTD_AHB_DR2R_R,Pin_Number);
-          CLRBIT(GPIO_PORTD_AHB_DR4R_R,Pin_Number);
-          CLRBIT(GPIO_PORTD_AHB_DR8R_R,Pin_Number);
-        }
-        else if(Drive_Select==DR4R)
-        {
-          CLRBIT(GPIO_PORTD_AHB_DR2R_R,Pin_Number);
-          SETBIT(GPIO_PORTD_AHB_DR4R_R,Pin_Number);
-          CLRBIT(GPIO_PORTD_AHB_DR8R_R,Pin_Number);
-        }
-        else if(Drive_Select==DR8R)
-        {
-          CLRBIT(GPIO_PORTD_AHB_DR2R_R,Pin_Number);
-          CLRBIT(GPIO_PORTD_AHB_DR4R_R,Pin_Number);
-          SETBIT(GPIO_PORTD_AHB_DR8R_R,Pin_Number);
-        }
-
-        if(Digital_EN==EN)
-          SETBIT(GPIO_PORTD_AHB_DEN_R,Pin_Number);
-        else if(Digital_EN==DIS)
-        {
-          CLRBIT(GPIO_PORTD_AHB_DEN_R,Pin_Number);
-          CLRBIT(GPIO_PORTD_AHB_AMSEL_R,Pin_Number);
-        }
-        else if(Digital_EN==AN_EN)
-          SETBIT(GPIO_PORTD_AHB_AMSEL_R,Pin_Number);
-    #endif
-}
-else if(Port==PORTE)
-{
-    #if(PORTE_BUS_CONTROL==APB)
-         if(DIR==IN)
-         CLRBIT(GPIO_PORTE_DIR_R,Pin_Number);
-         else if(DIR==OUT)
-         SETBIT(GPIO_PORTE_DIR_R,Pin_Number);
-
-         if(Aleternative_Func==GPIO)
-             CLRBIT(GPIO_PORTE_AFSEL_R,Pin_Number);
-         else if(Aleternative_Func==AF)
-             SETBIT(GPIO_PORTE_AFSEL_R,Pin_Number);
-
-         if(Drive_Select==DR2R)
-         {
-             SETBIT(GPIO_PORTE_DR2R_R,Pin_Number);
-             CLRBIT(GPIO_PORTE_DR4R_R,Pin_Number);
-             CLRBIT(GPIO_PORTE_DR8R_R,Pin_Number);
-         }
-         else if(Drive_Select==DR4R)
-         {
-             CLRBIT(GPIO_PORTE_DR2R_R,Pin_Number);
-             SETBIT(GPIO_PORTE_DR4R_R,Pin_Number);
-             CLRBIT(GPIO_PORTE_DR8R_R,Pin_Number);
-         }
-         else if(Drive_Select==DR8R)
-         {
-             CLRBIT(GPIO_PORTE_DR2R_R,Pin_Number);
-             CLRBIT(GPIO_PORTE_DR4R_R,Pin_Number);
-             SETBIT(GPIO_PORTE_DR8R_R,Pin_Number);
-         }
-
-         if(Digital_EN==EN)
-             SETBIT(GPIO_PORTE_DEN_R,Pin_Number);
-         else if(Digital_EN==DIS)
-         {
-             CLRBIT(GPIO_PORTE_DEN_R,Pin_Number);
-             CLRBIT(GPIO_PORTE_AMSEL_R,Pin_Number);
-         }
-         else if(Digital_EN==AN_EN)
-             SETBIT(GPIO_PORTE_AMSEL_R,Pin_Number);
-    #elif(PORTE_BUS_CONTROL==AHB)
-        if(DIR==IN)
-        CLRBIT(GPIO_PORTE_AHB_DIR_R,Pin_Number);
-        else if(DIR==OUT)
-        SETBIT(GPIO_PORTE_AHB_DIR_R,Pin_Number);
-
-        if(Aleternative_Func==GPIO)
-          CLRBIT(GPIO_PORTE_AHB_AFSEL_R,Pin_Number);
-        else if(Aleternative_Func==AF)
-          SETBIT(GPIO_PORTE_AHB_AFSEL_R,Pin_Number);
-
-        if(Drive_Select==DR2R)
-        {
-          SETBIT(GPIO_PORTE_AHB_DR2R_R,Pin_Number);
-          CLRBIT(GPIO_PORTE_AHB_DR4R_R,Pin_Number);
-          CLRBIT(GPIO_PORTE_AHB_DR8R_R,Pin_Number);
-        }
-        else if(Drive_Select==DR4R)
-        {
-          CLRBIT(GPIO_PORTE_AHB_DR2R_R,Pin_Number);
-          SETBIT(GPIO_PORTE_AHB_DR4R_R,Pin_Number);
-          CLRBIT(GPIO_PORTE_AHB_DR8R_R,Pin_Number);
-        }
-        else if(Drive_Select==DR8R)
-        {
-          CLRBIT(GPIO_PORTE_AHB_DR2R_R,Pin_Number);
-          CLRBIT(GPIO_PORTE_AHB_DR4R_R,Pin_Number);
-          SETBIT(GPIO_PORTE_AHB_DR8R_R,Pin_Number);
-        }
-
-        if(Digital_EN==EN)
-          SETBIT(GPIO_PORTE_AHB_DEN_R,Pin_Number);
-        else if(Digital_EN==DIS)
-        {
-          CLRBIT(GPIO_PORTE_AHB_DEN_R,Pin_Number);
-          CLRBIT(GPIO_PORTE_AHB_AMSEL_R,Pin_Number);
-        }
-        else if(Digital_EN==AN_EN)
-          SETBIT(GPIO_PORTE_AHB_AMSEL_R,Pin_Number);
-    #endif
-}
-else if(Port==PORTF)
-{
-    #if(PORTF_BUS_CONTROL==APB)
-         if(DIR==IN)
-         CLRBIT(GPIO_PORTF_DIR_R,Pin_Number);
-         else if(DIR==OUT)
-         SETBIT(GPIO_PORTF_DIR_R,Pin_Number);
-
-         if(Aleternative_Func==GPIO)
-             CLRBIT(GPIO_PORTF_AFSEL_R,Pin_Number);
-         else if(Aleternative_Func==AF)
-             SETBIT(GPIO_PORTF_AFSEL_R,Pin_Number);
-
-         if(Drive_Select==DR2R)
-         {
-             SETBIT(GPIO_PORTF_DR2R_R,Pin_Number);
-             CLRBIT(GPIO_PORTF_DR4R_R,Pin_Number);
-             CLRBIT(GPIO_PORTF_DR8R_R,Pin_Number);
-         }
-         else if(Drive_Select==DR4R)
-         {
-             CLRBIT(GPIO_PORTF_DR2R_R,Pin_Number);
-             SETBIT(GPIO_PORTF_DR4R_R,Pin_Number);
-             CLRBIT(GPIO_PORTF_DR8R_R,Pin_Number);
-         }
-         else if(Drive_Select==DR8R)
-         {
-             CLRBIT(GPIO_PORTF_DR2R_R,Pin_Number);
-             CLRBIT(GPIO_PORTF_DR4R_R,Pin_Number);
-             SETBIT(GPIO_PORTF_DR8R_R,Pin_Number);
-         }
-
-         if(Digital_EN==EN)
-             SETBIT(GPIO_PORTF_DEN_R,Pin_Number);
-         else if(Digital_EN==DIS)
-             CLRBIT(GPIO_PORTF_DEN_R,Pin_Number);
-
-    #elif(PORTF_BUS_CONTROL==AHB)
-        if(DIR==IN)
-        CLRBIT(GPIO_PORTF_AHB_DIR_R,Pin_Number);
-        else if(DIR==OUT)
-        SETBIT(GPIO_PORTF_AHB_DIR_R,Pin_Number);
-
-        if(Aleternative_Func==GPIO)
-          CLRBIT(GPIO_PORTF_AHB_AFSEL_R,Pin_Number);
-        else if(Aleternative_Func==AF)
-          SETBIT(GPIO_PORTF_AHB_AFSEL_R,Pin_Number);
-
-        if(Drive_Select==DR2R)
-        {
-          SETBIT(GPIO_PORTF_AHB_DR2R_R,Pin_Number);
-          CLRBIT(GPIO_PORTF_AHB_DR4R_R,Pin_Number);
-          CLRBIT(GPIO_PORTF_AHB_DR8R_R,Pin_Number);
-        }
-        else if(Drive_Select==DR4R)
-        {
-          CLRBIT(GPIO_PORTF_AHB_DR2R_R,Pin_Number);
-          SETBIT(GPIO_PORTF_AHB_DR4R_R,Pin_Number);
-          CLRBIT(GPIO_PORTF_AHB_DR8R_R,Pin_Number);
-        }
-        else if(Drive_Select==DR8R)
-        {
-          CLRBIT(GPIO_PORTF_AHB_DR2R_R,Pin_Number);
-          CLRBIT(GPIO_PORTF_AHB_DR4R_R,Pin_Number);
-          SETBIT(GPIO_PORTF_AHB_DR8R_R,Pin_Number);
-        }
-
-        if(Digital_EN==EN)
-          SETBIT(GPIO_PORTF_AHB_DEN_R,Pin_Number);
-        else if(Digital_EN==DIS)
-          CLRBIT(GPIO_PORTF_AHB_DEN_R,Pin_Number);
-    #endif
-}
-}
-/***************************************************************************/
-void GPIO_SetPin(u8 Port,u8 Pin_Number,u8 Value)
-{
-    if(Port==PORTA)
+/*  port = PORTA , PORTB , PORTC , PORTD , PORTE , PORTF
+ *  pins = 0bxxxxxxxx
+ *  Mode = IN , OUT , AF
+ * ex: 0b10100011  pins */
+    u32 PORT=GPIOPortAddrGet(port);
+    if(Mode==0x3)
     {
-        #if(PORTA_BUS_CONTROL==APB)
-            if(Value==HIGH)
-            {
-                 SETBIT(GPIO_PORTA_DATA_R,Pin_Number);
-            }
-            else if(Value==LOW)
-            {
-                CLRBIT(GPIO_PORTA_DATA_R,Pin_Number);
-            }
-        #elif(PORTA_BUS_CONTROL==AHB)
-            if(Value==HIGH)
-                        {
-                             SETBIT(GPIO_PORTA_AHB_DATA_R,Pin_Number);
-                        }
-                        else if(Value==LOW)
-                        {
-                            CLRBIT(GPIO_PORTA_AHB_DATA_R,Pin_Number);
-                        }
-        #endif
+        REG reg =(PORT+GPIOAFSEL);
+        u8 reg_data = *reg;
+        reg_data |= pins; /* setting the pins  */
+        *reg = reg_data;
     }
-
-    else if(Port==PORTB)
+    else
     {
-        #if(PORTB_BUS_CONTROL==APB)
-            if(Value==HIGH)
-            {
-                 SETBIT(GPIO_PORTB_DATA_R,Pin_Number);
-            }
-            else if(Value==LOW)
-            {
-                CLRBIT(GPIO_PORTB_DATA_R,Pin_Number);
-            }
-        #elif(PORTB_BUS_CONTROL==AHB)
-            if(Value==HIGH)
-            {
-                 SETBIT(GPIO_PORTB_AHB_DATA_R,Pin_Number);
-            }
-            else if(Value==LOW)
-            {
-                CLRBIT(GPIO_PORTB_AHB_DATA_R,Pin_Number);
-            }
-        #endif
+        REG AFSEL =(PORT+GPIOAFSEL);
+        u32 AFSEL_data = *AFSEL;
+        AFSEL_data &= ~(pins);
+
+        REG DIR =(PORT+GPIODIR);
+        u32 DIR_data = *DIR;
+        DIR_data &= ~(pins);
+        u32 mask = pins & Mode;
+        DIR_data |= mask;
+        *DIR = DIR_data;
+
+        REG DEN =(PORT+GPIODEN);
+        u32 DEN_data = *DEN;
+        DEN_data &= ~(pins);
+        DEN_data |= pins;
+        *DEN = DEN_data;
+
+
+
 
     }
-    else if(Port==PORTC)
-    {
-        #if(PORTC_BUS_CONTROL==APB)
-            if(Value==HIGH)
-            {
-                 SETBIT(GPIO_PORTC_DATA_R,Pin_Number);
-            }
-            else if(Value==LOW)
-            {
-                CLRBIT(GPIO_PORTC_DATA_R,Pin_Number);
-            }
-        #elif(PORTC_BUS_CONTROL==AHB)
-            if(Value==HIGH)
-            {
-                 SETBIT(GPIO_PORTC_AHB_DATA_R,Pin_Number);
-            }
-            else if(Value==LOW)
-            {
-                CLRBIT(GPIO_PORTC_AHB_DATA_R,Pin_Number);
-            }
-        #endif
-    }
-    else if(Port==PORTD)
-    {
-        #if(PORTD_BUS_CONTROL==APB)
-            if(Value==HIGH)
-            {
-                 SETBIT(GPIO_PORTD_DATA_R,Pin_Number);
-            }
-            else if(Value==LOW)
-            {
-                CLRBIT(GPIO_PORTD_DATA_R,Pin_Number);
-            }
-        #elif(PORTD_BUS_CONTROL==AHB)
-            if(Value==HIGH)
-            {
-                 SETBIT(GPIO_PORTD_AHB_DATA_R,Pin_Number);
-            }
-            else if(Value==LOW)
-            {
-                CLRBIT(GPIO_PORTD_AHB_DATA_R,Pin_Number);
-            }
-        #endif
-    }
-    else if(Port==PORTE)
-    {
-        #if(PORTE_BUS_CONTROL==APB)
-            if(Value==HIGH)
-            {
-                 SETBIT(GPIO_PORTE_DATA_R,Pin_Number);
-            }
-            else if(Value==LOW)
-            {
-                CLRBIT(GPIO_PORTE_DATA_R,Pin_Number);
-            }
-        #elif(PORTE_BUS_CONTROL==AHB)
-            if(Value==HIGH)
-            {
-                 SETBIT(GPIO_PORTE_AHB_DATA_R,Pin_Number);
-            }
-            else if(Value==LOW)
-            {
-                CLRBIT(GPIO_PORTE_AHB_DATA_R,Pin_Number);
-            }
-        #endif
-
-    }
-    else if(Port==PORTF)
-    {
-        #if(PORTF_BUS_CONTROL==APB)
-            if(Value==HIGH)
-            {
-                 SETBIT(GPIO_PORTF_DATA_R,Pin_Number);
-            }
-            else if(Value==LOW)
-            {
-                CLRBIT(GPIO_PORTF_DATA_R,Pin_Number);
-            }
-        #elif(PORTF_BUS_CONTROL==AHB)
-            if(Value==HIGH)
-            {
-                 SETBIT(GPIO_PORTF_AHB_DATA_R,Pin_Number);
-            }
-            else if(Value==LOW)
-            {
-                CLRBIT(GPIO_PORTF_AHB_DATA_R,Pin_Number);
-            }
-        #endif
-    }
-
 }
-/*********************************************************************/
-u8 GPIO_GetPin(u8 Port,u8 Pin_Number)
+/**********************************************/
+u8 GPIODirGet(gpio_port_t port, u8 pins)
 {
-    u8 Value=0;
-    if(Port==PORTA)
-    {
-        #if(PORTA_BUS_CONTROL==APB)
-        Value =GETBIT(GPIO_PORTA_DATA_R,Pin_Number);
-
-        #elif(PORTA_BUS_CONTROL==AHB)
-        Value =GETBIT(GPIO_PORTA_AHB_DATA_R,Pin_Number);
-        #endif
-    }
-
-    else if(Port==PORTB)
-    {
-        #if(PORTA_BUS_CONTROL==APB)
-        Value =GETBIT(GPIO_PORTB_DATA_R,Pin_Number);
-
-        #elif(PORTA_BUS_CONTROL==AHB)
-        Value =GETBIT(GPIO_PORTB_AHB_DATA_R,Pin_Number);
-        #endif
-    }
-    else if(Port==PORTC)
-    {
-        #if(PORTA_BUS_CONTROL==APB)
-        Value =GETBIT(GPIO_PORTC_DATA_R,Pin_Number);
-
-        #elif(PORTA_BUS_CONTROL==AHB)
-        Value =GETBIT(GPIO_PORTC_AHB_DATA_R,Pin_Number);
-        #endif
-    }
-    else if(Port==PORTD)
-    {
-        #if(PORTA_BUS_CONTROL==APB)
-        Value =GETBIT(GPIO_PORTD_DATA_R,Pin_Number);
-
-        #elif(PORTA_BUS_CONTROL==AHB)
-        Value =GETBIT(GPIO_PORTD_AHB_DATA_R,Pin_Number);
-        #endif
-    }
-    else if(Port==PORTE)
-    {
-        #if(PORTA_BUS_CONTROL==APB)
-        Value =GETBIT(GPIO_PORTE_DATA_R,Pin_Number);
-
-        #elif(PORTA_BUS_CONTROL==AHB)
-        Value =GETBIT(GPIO_PORTE_AHB_DATA_R,Pin_Number);
-        #endif
-    }
-    else if(Port==PORTF)
-    {
-        #if(PORTA_BUS_CONTROL==APB)
-        Value =GETBIT(GPIO_PORTF_DATA_R,Pin_Number);
-
-        #elif(PORTA_BUS_CONTROL==AHB)
-        Value =GETBIT(GPIO_PORTF_AHB_DATA_R,Pin_Number);
-        #endif
-    }
-
-
-return (Value);
+    /*  port = PORTA , PORTB , PORTC , PORTD , PORTE , PORTF
+     *  pins = 0bxxxxxxxx */
+    u32 PORT=GPIOPortAddrGet(port);
+    REG DIR =(PORT+GPIODIR);
+    u8 DIR_data = *DIR;
+    return (DIR_data);
 }
+/**********************************************/
+u8 GPIOModeGet(gpio_port_t port, u8 pins)
+{/* Alternative Function or GPIO (IN or out)
+ *  port = PORTA , PORTB , PORTC , PORTD , PORTE , PORTF
+ *  pins = 0bxxxxxxxx */
+    u32 PORT=GPIOPortAddrGet(port);
+    REG AFSEL =(PORT+GPIOAFSEL);
+    u8 AFSEL_data = *AFSEL;
+    return (AFSEL_data);
+}
+/**********************************************/
+void GPIOPadSet(gpio_port_t port, u8 pins, gpio_drive_t str, gpio_pad_t pad)
+{/* port = PORTA , PORTB , PORTC , PORTD , PORTE , PORTF
+ *  pins = 0bxxxxxxxx
+ *  Drive  =  Drive_2mA , Drive_4mA , Drive_8mA , Drive_8mA_Selw
+ *   */
+    u32 PORT=GPIOPortAddrGet(port);
+    if(str==GPIOSLR)/* setting the Drive : Drive_2mA , Drive_4mA , Drive_8mA , Drive_8mA_Selw */
+       {// set drive to be 8mA
+           REG DriveReg1 =(PORT+GPIODR8R);
+               u8 DriveReg1_data = *DriveReg1;
+               DriveReg1_data |= pins; /* setting the pins  */
+               *DriveReg1 = DriveReg1_data;
+       }
+        REG DriveReg0 =(PORT+str);
+        u8 DriveReg0_data = *DriveReg0;
+        DriveReg0_data |= pins; /* setting the pins  */
+        *DriveReg0 = DriveReg0_data;
 
+    if(pad==PAD_NPU_NPD)
+    {
+        REG PUReg=(PORT+Pad_PU);
+        u8 PUReg_data = *PUReg ;
+        PUReg_data &= ~(pins);
+        *PUReg=PUReg_data;
 
+        REG PDReg=(PORT+Pad_PD);
+        u8 PDReg_data = *PDReg ;
+        PDReg_data &= ~(pins);
+        *PDReg=PDReg_data;
+    }
+    else
+    {
+    REG PadReg =(PORT+pad);
+    u8 PadReg_data = *PadReg;
+    PadReg_data |= pins;
+    *PadReg = PadReg_data;
+    }
+}
+/**********************************************/
+u8 GPIORead(gpio_port_t port, u8 pins)
+{/* port = PORTA , PORTB , PORTC , PORTD , PORTE , PORTF
+ *  pins = 0bxxxxxxxx */
+    u32 PORT=GPIOPortAddrGet(port);
+    REG DataReg =(PORT+pins);
+    u8 DataReg_data = *DataReg;
+    return (DataReg_data);
+}
+/**********************************************/
+void GPIOWrite(gpio_port_t port, u8 pins, u8 data)
+{/* port = PORTA , PORTB , PORTC , PORTD , PORTE , PORTF
+ *  pins = 0bxxxxxxxx */
+    u32 PORT=GPIOPortAddrGet(port);
+    u16 mask=pins;
+    mask=mask<<2;
+    REG DataReg =(PORT+mask);
+    u8 DataReg_data = *DataReg;
+    DataReg_data &= ~(pins);
+    u8 ANDING = pins & data;
+    DataReg_data |=  ANDING;
+    *DataReg =DataReg_data;
+}
+/**********************************************/
+void GPIOQuickInit(gpio_port_t port,gpio_bus_t bus,gpio_ClockMode_t ClockMode, u8 pins, gpio_mode_t Mode, gpio_drive_t str, gpio_pad_t pad)
+{   /* port = PORTA , PORTB , PORTC , PORTD , PORTE , PORTF
+     * bus  = APB , AHB
+     * ClockMode = RCGC , SCGC , DCGC
+     * pins = 0bxxxxxxxx
+     * Mode = IN , OUT , AF
+     * Drive  =  Drive_2mA , Drive_4mA , Drive_8mA , Drive_8mA_Selw
+     * Pad = Pad_PU , Pad_PD , PAD_NPU_NPD , PAD_OD */
+    GPIOBusSet(port,bus);
+    GPIOClockSet(port,ClockMode);
+    GPIODirModeSet(port,pins,Mode);
+    GPIOPadSet(port,pins,str,pad);
+}
 
 
 #endif /* GPIO_PROG_C_ */
