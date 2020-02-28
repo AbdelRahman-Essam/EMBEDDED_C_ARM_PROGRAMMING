@@ -37,6 +37,20 @@
 #define     PORTF_APB       0x40025000
 #define     PORTF_AHB       0x4005D000
 
+#define     INT             0xE000E000
+
+
+
+
+#define     EN0             0x100
+#define     PRI7            0x41C
+#define     PEND0           0x200
+#define     GPIOIM          0x410
+#define     GPIOIS          0x404
+#define     GPIOIEV         0x40C
+#define     GPIOIBE         0x408
+#define     GPIORIS         0x414
+#define     GPIOICR         0x41C
 
 #define     GPIODATA        0x000
 #define     GPIODIR         0x400

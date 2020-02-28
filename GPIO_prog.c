@@ -157,6 +157,8 @@ void GPIOPadSet(gpio_port_t port, u8 pins, gpio_drive_t str, gpio_pad_t pad)
 {/* port = PORTA , PORTB , PORTC , PORTD , PORTE , PORTF
  *  pins = 0bxxxxxxxx
  *  Drive  =  Drive_2mA , Drive_4mA , Drive_8mA , Drive_8mA_Selw
+ *  Pad = Pad_PU , Pad_PD , PAD_NPU_NPD , PAD_OD
+ *
  *   */
     u32 PORT=GPIOPortAddrGet(port);
     if(str==GPIOSLR)/* setting the Drive : Drive_2mA , Drive_4mA , Drive_8mA , Drive_8mA_Selw */
@@ -192,6 +194,69 @@ void GPIOPadSet(gpio_port_t port, u8 pins, gpio_drive_t str, gpio_pad_t pad)
     }
 }
 /**********************************************/
+u8 GPIOPadDrive2mAStrGet(gpio_port_t port, u8 pins)
+{/* Alternative Function or GPIO (IN or out)
+ *  port = PORTA , PORTB , PORTC , PORTD , PORTE , PORTF
+ *  pins = 0bxxxxxxxx */
+    u32 PORT=GPIOPortAddrGet(port);
+    REG reg =(PORT+GPIODR2R);
+    u8 reg_data = *reg;
+    return (reg_data);
+}/**********************************************/
+u8 GPIOPadDrive4mAStrGet(gpio_port_t port, u8 pins)
+{/* Alternative Function or GPIO (IN or out)
+ *  port = PORTA , PORTB , PORTC , PORTD , PORTE , PORTF
+ *  pins = 0bxxxxxxxx */
+    u32 PORT=GPIOPortAddrGet(port);
+    REG reg =(PORT+GPIODR4R);
+    u8 reg_data = *reg;
+    return (reg_data);
+}/**********************************************/
+u8 GPIOPadDrive8mAStrGet(gpio_port_t port, u8 pins)
+{/* Alternative Function or GPIO (IN or out)
+ *  port = PORTA , PORTB , PORTC , PORTD , PORTE , PORTF
+ *  pins = 0bxxxxxxxx */
+    u32 PORT=GPIOPortAddrGet(port);
+    REG reg =(PORT+GPIODR8R);
+    u8 reg_data = *reg;
+    return (reg_data);
+}/**********************************************/
+u8 GPIOSlewRateGet(gpio_port_t port, u8 pins)
+{/* Alternative Function or GPIO (IN or out)
+ *  port = PORTA , PORTB , PORTC , PORTD , PORTE , PORTF
+ *  pins = 0bxxxxxxxx */
+    u32 PORT=GPIOPortAddrGet(port);
+    REG SLewRate =(PORT+GPIOSLR);
+    u8 SLewRate_data = *SLewRate;
+    return (SLewRate_data);
+}/**********************************************/
+u8 GPIOPadOpenDrainGet(gpio_port_t port, u8 pins)
+{/* Alternative Function or GPIO (IN or out)
+ *  port = PORTA , PORTB , PORTC , PORTD , PORTE , PORTF
+ *  pins = 0bxxxxxxxx */
+    u32 PORT=GPIOPortAddrGet(port);
+    REG OpenDrain =(PORT+GPIOODR);
+    u8 OpenDrain_data = *OpenDrain;
+    return (OpenDrain_data);
+}/**********************************************/
+u8 GPIOPadPullUpGet(gpio_port_t port, u8 pins)
+{/* Alternative Function or GPIO (IN or out)
+ *  port = PORTA , PORTB , PORTC , PORTD , PORTE , PORTF
+ *  pins = 0bxxxxxxxx */
+    u32 PORT=GPIOPortAddrGet(port);
+    REG PullUp =(PORT+GPIOPUR);
+    u8 PullUp_data = *PullUp;
+    return (PullUp_data);
+}/**********************************************/
+u8 GPIOPadPullDownGet(gpio_port_t port, u8 pins)
+{/* Alternative Function or GPIO (IN or out)
+ *  port = PORTA , PORTB , PORTC , PORTD , PORTE , PORTF
+ *  pins = 0bxxxxxxxx */
+    u32 PORT=GPIOPortAddrGet(port);
+    REG PullDown =(PORT+GPIOPDR);
+    u8 PullDown_data = *PullDown;
+    return (PullDown_data);
+}/**********************************************/
 u8 GPIORead(gpio_port_t port, u8 pins)
 {/* port = PORTA , PORTB , PORTC , PORTD , PORTE , PORTF
  *  pins = 0bxxxxxxxx */
@@ -227,6 +292,14 @@ void GPIOQuickInit(gpio_port_t port,gpio_bus_t bus,gpio_ClockMode_t ClockMode, u
     GPIOClockSet(port,ClockMode);
     GPIODirModeSet(port,pins,Mode);
     GPIOPadSet(port,pins,str,pad);
+}
+/**********************************************/
+void ISRPORTF(void)
+{
+    int i=0;
+    REG GPIOICR_Reg = PORTF_AHB + GPIOICR ;
+    SETBIT(*GPIOICR_Reg,4);
+    TOG_BIT(GPIO_PORTF_AHB_DATA_R, 1);
 }
 
 

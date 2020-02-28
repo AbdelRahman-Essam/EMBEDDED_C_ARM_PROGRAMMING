@@ -46,14 +46,17 @@ u8 GPIODirGet(gpio_port_t port, u8 pins);
 u8 GPIOModeGet(gpio_port_t port, u8 pins);
 
 void GPIOPadSet(gpio_port_t port, u8 pins, gpio_drive_t str, gpio_pad_t pad);
-u8 GPIOPadDriveStrGet(gpio_port_t port, u8 pins);// it needed to be separated
+u8 GPIOPadDrive2mAStrGet(gpio_port_t port, u8 pins);// it needed to be separated
+u8 GPIOPadDrive4mAStrGet(gpio_port_t port, u8 pins);
+u8 GPIOPadDrive8mAStrGet(gpio_port_t port, u8 pins);
 u8 GPIOPadOpenDrainGet(gpio_port_t port, u8 pins);
 u8 GPIOPadPullUpGet(gpio_port_t port, u8 pins);
 u8 GPIOPadPullDownGet(gpio_port_t port, u8 pins);
+u8 GPIOSlewRateGet(gpio_port_t port, u8 pins);
 
 u8 GPIORead(gpio_port_t port, u8 pins);
 void GPIOWrite(gpio_port_t port, u8 pins, u8 data);
-
+void ISRPORTF(void);
 //functions used internal
 u8 GPIOPortTrans(gpio_port_t port);
 u32 GPIOPortAddrGet(gpio_port_t port);
