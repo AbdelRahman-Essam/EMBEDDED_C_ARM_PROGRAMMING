@@ -104,7 +104,7 @@ void GPIODirModeSet(gpio_port_t port, u8 pins, gpio_mode_t Mode)
     if(Mode==0x3)
     {
         REG reg =(PORT+GPIOAFSEL);
-        u8 reg_data = *reg;
+        u32 reg_data = *reg;
         reg_data |= pins; /* setting the pins  */
         *reg = reg_data;
     }
@@ -279,7 +279,7 @@ void GPIOWrite(gpio_port_t port, u8 pins, u8 data)
     DataReg_data |=  ANDING;
     *DataReg =DataReg_data;
 }
-/**********************************************/
+/*******************Quick Init***************************/
 void GPIOQuickInit(gpio_port_t port,gpio_bus_t bus,gpio_ClockMode_t ClockMode, u8 pins, gpio_mode_t Mode, gpio_drive_t str, gpio_pad_t pad)
 {   /* port = PORTA , PORTB , PORTC , PORTD , PORTE , PORTF
      * bus  = APB , AHB
@@ -292,6 +292,112 @@ void GPIOQuickInit(gpio_port_t port,gpio_bus_t bus,gpio_ClockMode_t ClockMode, u
     GPIOClockSet(port,ClockMode);
     GPIODirModeSet(port,pins,Mode);
     GPIOPadSet(port,pins,str,pad);
+}
+void GPIOIntQuickInit(gpio_port_t port,u8 pins,gpio_sense_t sense,gpio_event_t event)
+{
+    u32 PORT =GPIOPortAddrGet(port);
+
+    REG reg =(PORT+GPIOAFSEL);
+    u8 reg_data = *reg;
+    reg_data |= pins; /* setting the pins  */
+    *reg = reg_data;
+}
+/*******************Interrupt Functions***************************/
+void GPIOIntSenseSet(gpio_port_t port, u8 pins, gpio_sense_t sense)
+{
+    u32 PORT =GPIOPortAddrGet(port);
+    REG SenseReg =PORT+GPIOIS;
+    u32 sense_data =*SenseReg;
+    sense_data &=~(pins);
+    u32 mask =pins & sense;
+    sense_data |= mask;
+    *SenseReg=sense_data;
+}
+u8 GPIOIntSenseGet(gpio_port_t port, u8 pins)
+{
+	u32 PORT = GPIOPortAddrGet(port);
+	REG SenseReg=PORT+GPIOIS;
+	u8 sense_data=*SenseReg;
+	return(sense_data);
+
+}
+void GPIOIntMaskSet(gpio_port_t port, u8 pins, gpio_mask_t masked)
+{
+		u32 PORT =GPIOPortAddrGet(port);
+	    REG MaskReg =PORT+GPIOIM;
+	    u32 mask_data =*MaskReg;
+	    mask_data &=~(pins);
+	    u32 mask =pins & masked;
+	    mask_data |= mask;
+	    *MaskReg=mask_data;
+}
+u8 GPIOIntMaskGet(gpio_port_t port,u8 pins)
+{
+	u32 PORT =GPIOPortAddrGet(port);
+	REG reg=PORT+GPIOIM;
+	u8 data=*reg;
+	return(data);
+}
+void GPIOIntEventSet(gpio_port_t port, u8 pins, gpio_event_t event)
+{
+	u32 PORT =GPIOPortAddrGet(port);
+	REG BothReg =PORT+GPIOIBE;
+	u32 both_data=*BothReg;
+	if(event==Both)
+	{
+		both_data|=pins;
+		*BothReg=both_data;
+	}
+	else
+	{
+		both_data &=~(pins);
+		*BothReg=both_data;
+
+	    REG EventReg =PORT+GPIOIEV;
+	    u32 event_data =*EventReg;
+	    event_data &=~(pins);
+	    u32 mask =pins & event;
+	    event_data |= mask;
+	    *EventReg=event_data;
+	}
+}
+u8   GPIOIntBothGet(gpio_port_t port, u8 pins)
+{
+	u32 PORT =GPIOPortAddrGet(port);
+	REG BothReg =PORT+GPIOIBE;
+	u8 both_data=*BothReg;
+	return(both_data);
+}
+u8   GPIOIntEventGet(gpio_port_t port, u8 pins)
+{
+	u32 PORT =GPIOPortAddrGet(port);
+	REG EventReg =PORT+GPIOIEV;
+    u8 event_data =*EventReg;
+    return(event_data);
+}
+u8 GPIOIntRawStatusGet(gpio_port_t port, u8 pins)
+{
+	u32 PORT =GPIOPortAddrGet(port);
+	REG Reg =PORT+GPIORIS;
+    u8 data =*Reg;
+    return(data);
+}
+u8 GPIOIntMaskedStatusGet(gpio_port_t port, u8 pins)
+{
+	u32 PORT =GPIOPortAddrGet(port);
+	REG Reg =PORT+GPIOMIS;
+    u8 data =*Reg;
+    return(data);
+}
+void GPIOIntClear(gpio_port_t port, u8 pins)
+{
+    u32 PORT =GPIOPortAddrGet(port);
+    REG Reg =PORT+GPIOICR;
+    u32 data =*Reg;
+    data &=~(pins);
+    u32 mask =pins;
+    data |= mask;
+    *Reg=data;
 }
 /**********************************************/
 void ISRPORTF(void)

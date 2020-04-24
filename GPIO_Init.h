@@ -29,7 +29,9 @@ typedef enum {RCGC=0x608 ,SCGC=0x708 ,DCGC=0x808} gpio_ClockMode_t;
 typedef enum {IN = 0x00, OUT = 0xff, AF = 0x3} gpio_mode_t;
 typedef enum {Drive_2mA=0x500, Drive_4mA=0x504, Drive_8mA=0x508, Drive_8mA_Selw=0x518} gpio_drive_t;
 typedef enum {Pad_PU=0x510,Pad_PD=0x514,PAD_NPU_NPD=0xFF,PAD_OD=0x50C} gpio_pad_t;
-
+typedef enum{Edge = 0, Level = 1}gpio_sense_t;
+typedef enum{Rising = 1, Falling = 0, Both = 2,Low = 0, High = 1}gpio_event_t;
+typedef enum{Masked=1,unMasked=0}gpio_mask_t;
 
 //Functions prototype
 void GPIOQuickInit(gpio_port_t port,gpio_bus_t bus,gpio_ClockMode_t ClockMode,u8 pins,gpio_mode_t Mode,gpio_drive_t str,gpio_pad_t pad);
@@ -56,7 +58,27 @@ u8 GPIOSlewRateGet(gpio_port_t port, u8 pins);
 
 u8 GPIORead(gpio_port_t port, u8 pins);
 void GPIOWrite(gpio_port_t port, u8 pins, u8 data);
-void ISRPORTF(void);
+
+/*******************Interrupt Functions***************************/
+u8 GPIOIntRawStatusGet(gpio_port_t port, u8 pins);
+u8 GPIOIntMaskedStatusGet(gpio_port_t port, u8 pins);
+void GPIOIntClear(gpio_port_t port, u8 pins);
+
+void GPIOIntMaskSet(gpio_port_t port, u8 pins, gpio_mask_t masked);
+u8 	 GPIOIntMaskGet(gpio_port_t port ,u8 pins);
+
+void GPIOIntSenseSet(gpio_port_t port, u8 pins, gpio_sense_t sense);
+u8   GPIOIntSenseGet(gpio_port_t port, u8 pins);
+
+void GPIOIntEventSet(gpio_port_t port, u8 pins, gpio_event_t event);
+u8   GPIOIntBothGet(gpio_port_t port, u8 pins);
+u8   GPIOIntEventGet(gpio_port_t port, u8 pins);
+
+void GPIOIntQuickInit(gpio_port_t port, u8 pins, gpio_sense_t sense, gpio_event_t event);
+
+void GPIOF_ISR(void);
+/**********************************************/
+
 //functions used internal
 u8 GPIOPortTrans(gpio_port_t port);
 u32 GPIOPortAddrGet(gpio_port_t port);

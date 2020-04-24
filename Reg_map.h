@@ -14,11 +14,12 @@
  * for port (E,F)
  *  AHB = base + 0x38000
  */
+/***********************SYSCTL**************************/
 #define     SYSCTL          0x400FE000
 
 #define     GPIOHBCTL       0x06C
 
-
+/***********************GPIO****************************/
 #define     PORTA_APB       0x40004000
 #define     PORTA_AHB       0x40058000
 
@@ -37,20 +38,6 @@
 #define     PORTF_APB       0x40025000
 #define     PORTF_AHB       0x4005D000
 
-#define     INT             0xE000E000
-
-
-
-
-#define     EN0             0x100
-#define     PRI7            0x41C
-#define     PEND0           0x200
-#define     GPIOIM          0x410
-#define     GPIOIS          0x404
-#define     GPIOIEV         0x40C
-#define     GPIOIBE         0x408
-#define     GPIORIS         0x414
-#define     GPIOICR         0x41C
 
 #define     GPIODATA        0x000
 #define     GPIODIR         0x400
@@ -63,6 +50,36 @@
 #define     GPIOPDR         0x514
 #define     GPIOSLR         0x518
 #define     GPIODEN         0x51C
+#define     GPIOIM          0x410
+#define     GPIOIS          0x404
+#define     GPIOIEV         0x40C
+#define     GPIOIBE         0x408
+#define     GPIORIS         0x414
+#define     GPIOMIS			0x418
+#define     GPIOICR         0x41C
+
+/**********************INT*****************************/
+#define     INT             0xE000E000
+
+
+
+
+
+
+
+
+#define     INT_UART0       5
+#define     INT_UART1       6
+#define     INT_SSI0        7
+#define     INT_I2C0        8
+
+
+#define     EN0             0x100
+#define     PRI7            0x41C
+#define     PEND0           0x200
+
+
+
 
 //*****************************************************************************
 //
