@@ -28,9 +28,9 @@ typedef enum {RCGC=0x608 ,SCGC=0x708 ,DCGC=0x808} gpio_ClockMode_t;
 typedef enum {IN = 0x00, OUT = 0xff, AF = 0x3} gpio_mode_t;
 typedef enum {Drive_2mA=0x500, Drive_4mA=0x504, Drive_8mA=0x508, Drive_8mA_Selw=0x518} gpio_drive_t;
 typedef enum {Pad_PU=0x510,Pad_PD=0x514,PAD_NPU_NPD=0xFF,PAD_OD=0x50C} gpio_pad_t;
-typedef enum{Edge = 0, Level = 1}gpio_sense_t;
-typedef enum{Rising = 1, Falling = 0, Both = 2,Low = 0, High = 1}gpio_event_t;
-typedef enum{Masked=0,unMasked=1}gpio_mask_t;
+typedef enum{Edge = 0, Level = 0xFF}gpio_sense_t;
+typedef enum{Rising = 0xFF, Falling = 0, Both = 2,Low = 0, High = 0xFF}gpio_event_t;
+typedef enum{Masked=0,unMasked=0xFF}gpio_mask_t;
 
 //Functions prototype
 void GPIOQuickInit(gpio_port_t port,gpio_bus_t bus,gpio_ClockMode_t ClockMode,u8 pins,gpio_mode_t Mode,gpio_drive_t str,gpio_pad_t pad);
@@ -83,5 +83,6 @@ u8 GPIOPortTrans(gpio_port_t port);
 u32 GPIOPortAddrGet(gpio_port_t port);
 
 
+void TIMER0_Handler(void);
 
 #endif /* GPIO_H_ */
